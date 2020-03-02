@@ -13,6 +13,7 @@ from atariari.methods.utils import get_argparser
 from atariari.methods.encoders import NatureCNN, ImpalaCNN
 from atariari.methods.cpc import CPCTrainer
 from atariari.methods.vae import VAETrainer
+from atariari.methods.ae import AETrainer
 from atariari.methods.no_action_feedforward_predictor import NaFFPredictorTrainer
 from atariari.methods.stdim import InfoNCESpatioTemporalTrainer
 import wandb
@@ -61,6 +62,8 @@ def train_encoder(args):
         trainer = GlobalLocalInfoNCESpatioTemporalTrainer(encoder, config, device=device, wandb=wandb)
     elif args.method == "dim":
         trainer = DIMTrainer(encoder, config, device=device, wandb=wandb)
+    elif args.method == "ae":
+        trainer = AETrainer(encoder, config, device=device, wandb=wandb)
     else:
         assert False, "method {} has no trainer".format(args.method)
 
