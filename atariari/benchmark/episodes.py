@@ -157,7 +157,7 @@ def get_episodes(env_name,
         assert False, "Collect mode {} not recognized".format(collect_mode)
 
     ep_inds = [i for i in range(len(episodes)) if len(episodes[i]) > min_episode_length]
-    episodes = [episodes[i] for i in ep_inds]
+    episodes = [episodes[i] for i in ep_inds]  # extrcts episodes that are longer than min_len
     episode_labels = [episode_labels[i] for i in ep_inds]
     episode_labels, entropy_dict = remove_low_entropy_labels(episode_labels, entropy_threshold=entropy_threshold)
 

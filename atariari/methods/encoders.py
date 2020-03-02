@@ -139,7 +139,7 @@ class NatureCNN(nn.Module):
                 init_(nn.Linear(self.final_conv_size, self.feature_size)),
                 #nn.ReLU()
             )
-        self.train()
+        self.train()  # training mode
 
     @property
     def local_layer_depth(self):

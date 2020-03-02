@@ -28,7 +28,9 @@ class InfoNCESpatioTemporalTrainer(Trainer):
         super().__init__(encoder, wandb, device)
         self.config = config
         self.patience = self.config["patience"]
+        # classifier1 is the global predictor
         self.classifier1 = nn.Linear(self.encoder.hidden_size, self.encoder.local_layer_depth).to(device)  # x1 = global, x2=patch, n_channels = 32
+        # classifier2 is the local predictor
         self.classifier2 = nn.Linear(self.encoder.local_layer_depth, self.encoder.local_layer_depth).to(device)
         self.epochs = config['epochs']
         self.batch_size = config['batch_size']
@@ -80,6 +82,7 @@ class InfoNCESpatioTemporalTrainer(Trainer):
                 for x in range(sx):
                     predictions = self.classifier1(f_t)
                     positive = f_t_prev[:, y, x, :]
+                    # logits: N x N matrix with the diag be the postive scores
                     logits = torch.matmul(predictions, positive.t())
                     step_loss = F.cross_entropy(logits, torch.arange(N).to(self.device))
                     loss1 += step_loss

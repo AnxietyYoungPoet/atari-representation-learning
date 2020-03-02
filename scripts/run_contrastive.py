@@ -35,7 +35,7 @@ def train_encoder(args):
                                  min_episode_length=args.batch_size)
 
     observation_shape = tr_eps[0][0].shape
-    if args.encoder_type == "Nature":
+    if args.encoder_type == "Nature":  # NCHW
         encoder = NatureCNN(observation_shape[0], args)
     elif args.encoder_type == "Impala":
         encoder = ImpalaCNN(observation_shape[0], args)
