@@ -184,8 +184,8 @@ atari_dict = {
                  enemy_score=13,
                  player_score=14),
 
-    "privateeye": dict(agent_x=63,
-                       agent_y=86,
+    "privateeye": dict(player_x=63,
+                       player_y=86,
                        room_number=92,
                        clock=[67, 69],
                        player_direction=58,
@@ -209,11 +209,11 @@ atari_dict = {
     "seaquest": dict(enemy_obstacle_x=range(30, 34),
                      player_x=70,
                      player_y=97,
-                     diver_x=range(71, 75),
+                     diver_or_enemy_missile_x=range(71, 75),
                      player_direction=86,
-                     missile_direction=87,
+                     player_missile_direction=87,
                      oxygen_meter_value=102,
-                     missile_x=103,
+                     player_missile_x=103,
                      score=[57, 58],
                      num_lives=59,
                      divers_collected_count=62),
@@ -268,14 +268,14 @@ atari_dict = {
                          score_1=48,
                          score_2=50),
 
-    "yarsrevenge": dict(player_yar_x=32,
-                        player_yar_y=31,
-                        yar_missile_x=38,
-                        yar_missile_y=37,
-                        enemy_qotile_x=43,
-                        enemy_qotile_y=42,
-                        qotile_missile_x=47,
-                        qotile_missile_y=46)
+    "yarsrevenge": dict(player_x=32,
+                        player_y=31,
+                        player_missile_x=38,
+                        player_missile_y=37,
+                        enemy_x=43,
+                        enemy_y=42,
+                        enemy_missile_x=47,
+                        enemy_missile_y=46)
 }
 
 # break up any lists (e.g. dict(clock=[67, 69]) -> dict(clock_0=67, clock_1=69) )
