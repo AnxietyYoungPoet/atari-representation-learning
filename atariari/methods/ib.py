@@ -104,6 +104,12 @@ class InfoBottleneck(Trainer):
       logits = torch.matmul(predictions, mu_tprev.t())
       nce_loss = F.cross_entropy(logits, torch.arange(N).to(self.device))
       loss = kl_loss + nce_loss
+
+      if mode == 'train':
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
       epoch_loss += loss.detach().item()
       epoch_kl_loss += kl_loss.detach().item()
       epoch_nce_loss += nce_loss.detach().item()
