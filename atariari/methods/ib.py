@@ -17,7 +17,7 @@ class Classifier(nn.Module):
   def __init__(self, num_inputs1, num_inputs2):
     super().__init__()
     self.network = nn.Bilinear(num_inputs1, num_inputs2)
-  
+
   def forward(self, x1, x2):
     return self.network(x1, x2)
 
@@ -32,11 +32,11 @@ class Encoder(nn.Module):
     self.input_channels = self.encoder.input_channels
 
     self.logvar_fc = nn.Linear(in_features=self.final_conv_size, out_features=self.feature_size)
-  
+
   def reparametrize(self, mu, logva):
     if self.training:
       eps = torch
-  
+
   def forward(self, x):
     final_conv = self.encoder.main[:-1](x)
     mu = self.encoder.main[-1](final_conv)
@@ -67,7 +67,7 @@ class InfoBottleneck(Trainer):
     self.early_stopper = EarlyStopping(
       patience=self.patience, verbose=False, wandb=self.wandb, name='encoder')
     self.transform = transforms.Compose([Cutout(n_holes=1, length=80)])
-  
+
   def generate_batch(self, episodes):
     total_steps = sum([len(e) for e in episodes])
     print('Total Steps: {}'.format(total_steps))
@@ -86,7 +86,7 @@ class InfoBottleneck(Trainer):
         x_tprev.append(episode[t - 1])
         ts.append([t])
       yield torch.stack(x_t).float().to(self.device) / 255., torch.stack(x_tprev).float().to(self.device) / 255.
-  
+
   def do_one_epoch(self, epoch, episodes):
     mode = 'train' if self.encoder.training and self.classifier.training else 'val'
     epoch_loss, steps = 0., 0
@@ -98,7 +98,7 @@ class InfoBottleneck(Trainer):
       z_tprev, mu_tprev, dist_tprev = self.Encoder(x_tprev)
       prior_dist = Normal(
         torch.zeros_like(z_t).to(self.device), torch.ones_like(z_t).to(self.device))
-      kl_loss = self.beta * kl_divergence(dist, prior_dist).mean()
+      kl_loss = self.beta * kl_divergence(dist, prior_dist).sum(1).mean()
 
       predictions = self.classifier(z_t)
       logits = torch.matmul(predictions, mu_tprev.t())
@@ -114,11 +114,11 @@ class InfoBottleneck(Trainer):
       epoch_kl_loss += kl_loss.detach().item()
       epoch_nce_loss += nce_loss.detach().item()
       steps += 1
-    
+
     self.log_results(epoch, epoch_loss / steps, epoch_kl_loss / steps, epoch_nce_loss / steps, prefix=mode)
     if mode == 'val':
       self.early_stopper(-epoch_loss / steps, self.encoder)
-  
+
   def train(self, tr_eps, val_eps):
     for e in range(self.epochs):
       self.Encoder.train(), self.classifier.train()
@@ -129,9 +129,9 @@ class InfoBottleneck(Trainer):
 
       if self.early_stopper.early_stop:
         break
-    
+
     torch.save(self.encoder.state_dict(), os.path.join(self.wandb.run.dir, self.config['env_name'] + '.pt'))
-  
+
   def log_results(self, epoch_idx, epoch_loss, epoch_kl_loss, epoch_nce_loss, prefix=''):
     print(f'{prefix.capitalize()} Epoch: {epoch_idx}, Epoch Loss: {epoch_loss}, {prefix.capitalize()}')
 

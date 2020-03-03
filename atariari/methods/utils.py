@@ -86,7 +86,7 @@ def get_argparser():
     parser.add_argument("--collect-mode", type=str, choices=["random_agent", "pretrained_ppo"],
                         default="random_agent")
 
-    parser.add_argument("--beta", default=1.0)
+    parser.add_argument("--beta", type=float, default=1.0)
     # probe arguments
     parser.add_argument("--weights-path", type=str, default="None")
     parser.add_argument("--train-encoder", action='store_true', default=True)
