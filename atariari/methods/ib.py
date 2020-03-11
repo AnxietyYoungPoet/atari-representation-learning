@@ -101,7 +101,7 @@ class InfoBottleneck(Trainer):
       kl_loss = self.beta * kl_divergence(dist, prior_dist).sum(1).mean()
 
       predictions = self.classifier(z_t)
-      logits = torch.matmul(predictions, mu_tprev.t())
+      logits = torch.matmul(predictions, z_tprev.t())
       nce_loss = F.cross_entropy(logits, torch.arange(N).to(self.device))
       loss = kl_loss + nce_loss
 
