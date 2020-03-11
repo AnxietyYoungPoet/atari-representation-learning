@@ -88,5 +88,5 @@ if __name__ == "__main__":
     tags = ['probe']
     wandb.init(
         project=args.wandb_proj, entity=args.wandb_entity,
-        tags=tags, name=args.wandb_name)
+        tags=tags, name=args.wandb_name, dir=args.wandb_dir)
     run_probe(args)
