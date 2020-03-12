@@ -73,7 +73,7 @@ class GlobalTemporalDIMTrainer(Trainer):
         accuracy1, accuracy2 = 0., 0.
         epoch_loss1, epoch_loss2 = 0., 0.
         data_generator = self.generate_batch(episodes)
-        for x_t, x_tprev in data_generator:
+        for x_t in data_generator:
             f_t_maps = self.encoder(x_t, fmaps=True)
 
             # Loss 1: Global at time t, f5 patches at time t-1
