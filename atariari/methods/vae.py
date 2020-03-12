@@ -100,8 +100,9 @@ class VAELoss(object):
     def __call__(self, x, x_hat, mu, logvar):
         kldiv = -0.5 * torch.sum(1 + logvar - mu ** 2 - torch.exp(logvar))
         rec = F.mse_loss(x_hat, x, reduction='sum')
-        loss = rec + self.beta * kldiv
-        return loss
+        kl = self.beta * kldiv
+        loss = rec + kl
+        return loss, rec, kl
 
 
 class VAETrainer(Trainer):
@@ -140,11 +141,12 @@ class VAETrainer(Trainer):
     def do_one_epoch(self, epoch, episodes):
         mode = "train" if self.VAE.training else "val"
         epoch_loss, accuracy, steps = 0., 0., 0
+        epoch_rec_loss, epoch_kl_loss = 0., 0.
         data_generator = self.generate_batch(episodes)
         for x_t in data_generator:
             with torch.set_grad_enabled(mode == 'train'):
                 x_hat, mu, logvar = self.VAE(x_t)
-                loss = self.loss_fn(x_t, x_hat, mu, logvar)
+                loss, rec_loss, kl_loss = self.loss_fn(x_t, x_hat, mu, logvar)
 
             if mode == "train":
                 self.optimizer.zero_grad()
@@ -152,8 +154,10 @@ class VAETrainer(Trainer):
                 self.optimizer.step()
 
             epoch_loss += loss.detach().item()
+            epoch_rec_loss += rec_loss.detach().item()
+            epoch_kl_loss += kl_loss.detach().item()
             steps += 1
-        self.log_results(epoch, epoch_loss / steps, prefix=mode)
+        self.log_results(epoch, epoch_loss / steps, epoch_kl_loss / steps, epoch_rec_loss / steps, prefix=mode)
         if mode == "val":
             self.early_stopper(-epoch_loss / steps, self.encoder)
 
@@ -172,6 +176,11 @@ class VAETrainer(Trainer):
                 break
         torch.save(self.encoder.state_dict(), os.path.join(self.wandb.run.dir, self.config['env_name'] + '.pt'))
 
-    def log_results(self, epoch_idx, epoch_loss, prefix=""):
-        print("{} Epoch: {}, Epoch Loss: {}".format(prefix.capitalize(), epoch_idx, epoch_loss))
-        self.wandb.log({prefix + '_loss': epoch_loss})
+    def log_results(self, epoch_idx, epoch_loss, epoch_kl_loss, epoch_rec_loss, prefix=''):
+        print(f'{prefix.capitalize()} Epoch: {epoch_idx}, Epoch Loss: {epoch_loss}, {prefix.capitalize()}')
+
+        self.wandb.log({
+            prefix + '_loss': epoch_loss,
+            prefix + '_kl_loss': epoch_kl_loss,
+            prefix + '_rec_loss': epoch_rec_loss,
+        }, step=epoch_idx, commit=False)
