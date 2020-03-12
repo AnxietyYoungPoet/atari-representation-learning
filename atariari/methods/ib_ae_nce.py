@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.distributions.normal import Normal
+from torch.distributions.kl import kl_divergence
 from a2c_ppo_acktr.utils import init
 
 import os
@@ -64,53 +66,41 @@ class AE(nn.Module):
         self.final_conv_size = self.encoder.final_conv_size
         self.final_conv_shape = self.encoder.final_conv_shape
         self.input_channels = self.encoder.input_channels
+        self.logvar_fc = nn.Linear(in_features=self.final_conv_size, out_features=self.feature_size)
 
         self.decoder = Decoder(feature_size=self.feature_size,
                                final_conv_size=self.final_conv_size,
                                final_conv_shape=self.final_conv_shape,
                                num_input_channels=self.input_channels)
 
-    def reparametrize(self, mu, logvar):
+    def forward(self, x):
+        final_conv = self.encoder.main[:-1](x)
+        mu = self.encoder.main[-1](final_conv)
+        logvar = self.logvar_fc(final_conv)
+        std = F.softplus(logvar)
+        dist = Normal(mu, std)
         if self.training:
-            eps = torch.randn(*logvar.size()).to(mu.device)
-            std = torch.exp(0.5 * logvar)
-            z = mu + eps * std
+            z = dist.rsample()
         else:
             z = mu
-        return z
-
-    def forward(self, x):
-        mu = self.encoder(x)
-        # logvar = self.logvar_fc(self.encoder.main[:-1](x))
-        # z = self.reparametrize(mu, logvar)
-        x_hat = self.decoder(mu)
-        return x_hat
+        x_hat = self.decoder(z)
+        return z, mu, dist, x_hat
 
 
-class AELoss(object):
-    def __init__(self, beta=1.0):
-        self.beta = beta
-
-    def __call__(self, x, x_hat):
-        # kldiv = -0.5 * torch.sum(1 + logvar - mu ** 2 - torch.exp(logvar))
-        rec = F.mse_loss(x_hat, x, reduction='sum')
-        # loss = rec + self.beta * kldiv
-        return rec
-
-
-class AETrainer(Trainer):
+class IBAENCETrainer(Trainer):
     # TODO: Make it work for all modes, right now only it defaults to pcl.
     def __init__(self, encoder, config, device=torch.device('cpu'), wandb=None):
         super().__init__(encoder, wandb, device)
         self.config = config
         self.patience = self.config["patience"]
         self.AE = AE(encoder).to(device)
+        self.classfier = nn.Linear(self.encoder.hidden_size, self.encoder.hidden_size).to(device)
         self.epochs = config['epochs']
         self.batch_size = config['batch_size']
+        self.beta = config['beta']
         self.device = device
-        self.optimizer = torch.optim.Adam(list(self.AE.parameters()),
+        self.optimizer = torch.optim.Adam(list(self.AE.parameters()) + list(self.classfier.parameters()),
                                           lr=config['lr'], eps=1e-5)
-        self.loss_fn = AELoss(beta=self.config["beta"])
         self.early_stopper = EarlyStopping(patience=self.patience, verbose=False, wandb=self.wandb, name="encoder")
 
     def generate_batch(self, episodes):
@@ -133,22 +123,38 @@ class AETrainer(Trainer):
             yield torch.stack(x_t).float().to(self.device) / 255., torch.stack(x_tprev).float().to(self.device) / 255.
 
     def do_one_epoch(self, epoch, episodes):
-        mode = "train" if self.AE.training else "val"
-        epoch_loss, accuracy, steps = 0., 0., 0
+        mode = "train" if self.AE.training and self.classfier.training else "val"
+        epoch_loss, steps = 0., 0
+        epoch_kl_loss, epoch_nce_loss, epoch_recon_loss = 0., 0., 0.
         data_generator = self.generate_batch(episodes)
-        for x_t in data_generator:
+        for x_t, x_tprev in data_generator:
             with torch.set_grad_enabled(mode == 'train'):
-                x_hat = self.AE(x_t)
-                loss = self.loss_fn(x_t, x_hat)
+                z_t, mu, dist, x_hat = self.AE(x_t)
+                N = z_t.size(0)
+                z_tprev, _, _, _ = self.AE(x_tprev)
+                prior_dist = Normal(
+                    torch.zeros_like(z_t).to(self.device), torch.ones_like(z_t).to(self.device))
+                kl_loss = self.beta * kl_divergence(dist, prior_dist).sum(1).mean()
+                predictions = self.classfier(z_t)
+                logits = torch.matmul(predictions, z_tprev.t())
+                nce_loss = F.cross_entropy(logits, torch.arange(N).to(self.device))
+                recon_loss = F.mse_loss(x_hat, x_t, reduction='mean')
+                loss = kl_loss + nce_loss
 
             if mode == "train":
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
-
+            
             epoch_loss += loss.detach().item()
+            epoch_kl_loss += kl_loss.detach().item()
+            epoch_nce_loss += nce_loss.detach().item()
+            epoch_recon_loss += recon_loss.detach().item()
             steps += 1
-        self.log_results(epoch, epoch_loss / steps, prefix=mode)
+
+        self.log_results(
+            epoch, epoch_loss / steps, epoch_kl_loss / steps,
+            epoch_nce_loss / steps, epoch_recon_loss / steps, prefix=mode)
         if mode == "val":
             self.early_stopper(-epoch_loss / steps, self.encoder)
 
@@ -167,6 +173,16 @@ class AETrainer(Trainer):
                 break
         torch.save(self.encoder.state_dict(), os.path.join(self.wandb.run.dir, self.config['env_name'] + '.pt'))
 
-    def log_results(self, epoch_idx, epoch_loss, prefix=""):
-        print("{} Epoch: {}, Epoch Loss: {}".format(prefix.capitalize(), epoch_idx, epoch_loss))
-        self.wandb.log({prefix + '_loss': epoch_loss})
+    def log_results(
+        self, epoch_idx, epoch_loss, epoch_kl_loss,
+        epoch_nce_loss, epoch_recon_loss, prefix=''
+    ):
+        print(
+            f'{prefix.capitalize()} Epoch: {epoch_idx}, Epoch Loss: {epoch_loss}, {prefix.capitalize()}')
+
+        self.wandb.log({
+            prefix + '_loss': epoch_loss,
+            prefix + '_kl_loss': epoch_kl_loss,
+            prefix + '_nce_loss': epoch_nce_loss,
+            prefix + '_recon_loss': epoch_recon_loss,
+        }, step=epoch_idx, commit=False)

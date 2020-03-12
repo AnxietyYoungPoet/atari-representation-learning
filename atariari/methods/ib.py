@@ -33,10 +33,6 @@ class Encoder(nn.Module):
 
     self.logvar_fc = nn.Linear(in_features=self.final_conv_size, out_features=self.feature_size)
 
-  def reparametrize(self, mu, logva):
-    if self.training:
-      eps = torch
-
   def forward(self, x):
     final_conv = self.encoder.main[:-1](x)
     mu = self.encoder.main[-1](final_conv)

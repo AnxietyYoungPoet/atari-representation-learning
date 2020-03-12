@@ -11,8 +11,9 @@ from a2c_ppo_acktr.utils import get_vec_normalize
 from collections import defaultdict
 
 # methods that need encoder trained before
-train_encoder_methods = ['cpc', 'jsd-stdim', 'vae', "naff", "infonce-stdim", "global-infonce-stdim",
-                         "global-local-infonce-stdim", "dim", "ae", "ib", "global-t-dim"]
+train_encoder_methods = [
+    'cpc', 'jsd-stdim', 'vae', "naff", "infonce-stdim", "global-infonce-stdim",
+    "global-local-infonce-stdim", "dim", "ae", "ib", "global-t-dim", 'ib-ae-nce']
 probe_only_methods = ["supervised", "random-cnn", "majority", "pretrained-rl-agent"]
 
 
