@@ -17,6 +17,7 @@ from atariari.methods.ae import AETrainer
 from atariari.methods.ib import InfoBottleneck
 from atariari.methods.no_action_feedforward_predictor import NaFFPredictorTrainer
 from atariari.methods.stdim import InfoNCESpatioTemporalTrainer
+from atariari.methods.global_temporal_dim import GlobalTemporalDIMTrainer
 import wandb
 from atariari.benchmark.episodes import get_episodes
 
@@ -67,6 +68,8 @@ def train_encoder(args):
         trainer = AETrainer(encoder, config, device=device, wandb=wandb)
     elif args.method == 'ib':
         trainer = InfoBottleneck(encoder, config, device=device, wandb=wandb)
+    elif args.method == 'global-t-dim':
+        trainer = GlobalTemporalDIMTrainer(encoder, config, device=device, wandb=wandb)
     else:
         assert False, "method {} has no trainer".format(args.method)
 
