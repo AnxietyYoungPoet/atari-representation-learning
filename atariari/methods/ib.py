@@ -81,7 +81,7 @@ class InfoBottleneck(Trainer):
       x_t, x_tprev, x_that, ts, thats = [], [], [], [], []
       for episode in episodes_batch:
         t, t_hat = 0, 0
-        t, t_hat = np.random.randint(0, len(episode)), np.random.randint(0, len(episode))
+        t, t_hat = np.random.randint(1, len(episode)), np.random.randint(0, len(episode))
         x_t.append(episode[t])
         x_tprev.append(episode[t - 1])
         ts.append([t])
