@@ -138,7 +138,7 @@ class IBAENCETrainer(Trainer):
                 predictions = self.classfier(z_t)
                 logits = torch.matmul(predictions, z_tprev.t())
                 nce_loss = F.cross_entropy(logits, torch.arange(N).to(self.device))
-                recon_loss = F.mse_loss(x_hat, x_t, reduction='mean')
+                recon_loss = F.mse_loss(x_hat, x_t, reduction='sum') * 0.001
                 loss = kl_loss + nce_loss
 
             if mode == "train":
