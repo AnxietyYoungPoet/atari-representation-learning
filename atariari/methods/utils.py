@@ -13,7 +13,8 @@ from collections import defaultdict
 # methods that need encoder trained before
 train_encoder_methods = [
     'cpc', 'jsd-stdim', 'vae', "naff", "infonce-stdim", "global-infonce-stdim",
-    "global-local-infonce-stdim", "dim", "ae", "ib", "global-t-dim", 'ib-ae-nce']
+    "global-local-infonce-stdim", "dim", "ae", "ib", "global-t-dim", 'ib-ae-nce',
+    'ib-stdim']
 probe_only_methods = ["supervised", "random-cnn", "majority", "pretrained-rl-agent"]
 
 

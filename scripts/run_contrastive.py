@@ -19,6 +19,7 @@ from atariari.methods.no_action_feedforward_predictor import NaFFPredictorTraine
 from atariari.methods.stdim import InfoNCESpatioTemporalTrainer
 from atariari.methods.global_temporal_dim import GlobalTemporalDIMTrainer
 from atariari.methods.ib_ae_nce import IBAENCETrainer
+from atariari.methods.ib_stdim import IBSTDIMTrainer
 import wandb
 from atariari.benchmark.episodes import get_episodes
 
@@ -73,6 +74,8 @@ def train_encoder(args):
         trainer = GlobalTemporalDIMTrainer(encoder, config, device=device, wandb=wandb)
     elif args.method == 'ib-ae-nce':
         trainer = IBAENCETrainer(encoder, config, device=device, wandb=wandb)
+    elif args.method == 'ib-stdim':
+        trainer = IBSTDIMTrainer(encoder, config, device=device, wandb=wandb)
     else:
         assert False, "method {} has no trainer".format(args.method)
 
