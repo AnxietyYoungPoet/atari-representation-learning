@@ -22,13 +22,13 @@ class Encoder(nn.Module):
         self.encoder = encoder
         self.feature_size = self.encoder.feature_size
         self.final_conv_size = self.encoder.final_conv_size
-        self.final_conve_shape = self.encoder.final_conve_shape
+        self.final_conv_shape = self.encoder.final_conv_shape
         self.input_channels = self.encoder.input_channels
 
         self.logvar_fc  = nn.Linear(in_features=self.final_conv_size, out_features=self.feature_size)
     
     def forward(self, x):
-        f_map = self.encoder(x, fmap=True)
+        f_map = self.encoder(x, fmaps=True)
         mu = f_map['out']
         logvar = self.logvar_fc(self.encoder.main[:-1](x))
         std = F.softplus(logvar)
